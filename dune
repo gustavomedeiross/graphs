@@ -1,4 +1,9 @@
 (executable
  (name coloring)
- (libraries core)
- (preprocess (pps ppx_deriving.show)))
+ (libraries core alcotest)
+ (preprocess (pps ppx_deriving.show ppx_deriving.eq)))
+
+; (tests
+ ; (names coloring_test)
+ ; (modules coloring_test)
+ ; (libraries coloring alcotest))
