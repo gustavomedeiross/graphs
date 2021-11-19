@@ -32,6 +32,7 @@ _opam/
 # --- Haskell ---
 dist
 dist-*
+newdist
 cabal-dev
 *.o
 *.hi
