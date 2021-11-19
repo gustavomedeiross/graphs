@@ -34,10 +34,6 @@ let graph_to_adjacency = function
   | Graph (vertices, edges) ->
     Adjacency (List.map vertices ~f:(fun v -> (v, adj_vertices v edges)))
 
-(* TODO: Is this required? *)
-let sort_by_degree adjacency =
-  List.sort adjacency ~compare:(fun a b -> Int.descending (List.length (snd a)) (List.length (snd b)))
-
 let neighbors adj vertex =
   List.find adj ~f:(fun (v, _edges) -> Poly.equal vertex v)
   |> Option.map ~f:(fun (_, edges) -> edges)
@@ -58,7 +54,7 @@ let select_color state adj vertex =
   let nghbs = neighbors adj (fst vertex) in
   select_color' state nghbs 1
 
-let rec color (state : state) (adjacency_list : 'a adjacency) =
+let rec color state adjacency_list =
   let Adjacency(adj) = adjacency_list in
   let current_vertex = List.find state ~f:(fun (_v, color) -> color = -1) in
   Out_channel.print_endline (show_state state);
@@ -74,7 +70,6 @@ let rec color (state : state) (adjacency_list : 'a adjacency) =
 
 let coloring (graph : 'a graph) : ('a vertex * color) list =
   let Adjacency(adj) = graph_to_adjacency graph in
-  (* let sorted = sort_by_degree adj in *)
   let initial_state = List.map adj ~f:(fun v -> (fst v, -1)) in
   color initial_state (Adjacency adj)
 
