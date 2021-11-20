@@ -1,7 +1,9 @@
 module Main where
 
-import           Data.List  (filter, find, map, nub, reverse)
-import qualified Data.Maybe as Maybe
+import           Data.List        (filter, find, map, nub, reverse)
+import qualified Data.Maybe       as Maybe
+import           Test.Tasty
+import           Test.Tasty.HUnit
 
 type Vertex a = a
 
@@ -54,8 +56,8 @@ selectColor colored adj vertex =
 getVertexColor :: (Eq a) => Colored a -> Vertex a -> Maybe.Maybe Color
 getVertexColor colored vertex = snd <$> find (\v -> vertex == fst v) colored
 
-sample :: Graph Integer
-sample =
+graph1 :: Graph Integer
+graph1 =
   ( [1, 2, 3, 4, 5, 6, 7, 8]
   , [ (1, 2)
     , (1, 3)
@@ -82,6 +84,41 @@ sample =
     , (8, 7)
     ])
 
+graph2 :: Graph Integer
+graph2 =
+  ( [1, 2, 3, 4, 5, 6]
+  , [ (1, 2)
+    , (1, 4)
+    , (1, 6)
+    , (2, 1)
+    , (2, 3)
+    , (2, 5)
+    , (3, 2)
+    , (3, 4)
+    , (3, 6)
+    , (4, 1)
+    , (4, 3)
+    , (4, 5)
+    , (5, 2)
+    , (5, 4)
+    , (5, 6)
+    , (6, 1)
+    , (6, 3)
+    , (6, 5)
+    ])
+
+coloringTests =
+  testGroup
+    "Graph Coloring"
+    [ testCase "Graph #1" $
+      coloring graph1 @?=
+      [(1, 1), (2, 2), (3, 2), (4, 2), (5, 1), (6, 3), (7, 3), (8, 2)]
+    , testCase "Graph #2" $
+      coloring graph2 @?= [(1, 1), (2, 2), (3, 1), (4, 2), (5, 1), (6, 2)]
+    ]
+
+tests :: TestTree
+tests = testGroup "Tests" [coloringTests]
+
 main :: IO ()
-main = do
-  print $ coloring sample
+main = defaultMain tests
