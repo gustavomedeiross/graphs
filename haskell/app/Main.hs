@@ -45,7 +45,7 @@ neighbors adj vertex = snd . Maybe.fromJust . find (\v -> vertex == fst v) $ adj
 selectColor :: (Eq a) => Colored a -> Adjacency a -> Vertex a -> Color
 selectColor colored adj vertex =
   let neighborColors =
-        Maybe.catMaybes . map (getVertexColor colored) $ neighbors adj vertex
+        Maybe.mapMaybe (getVertexColor colored) $ neighbors adj vertex
    in f neighborColors 1
   where
     f nghbsColors color =
@@ -55,6 +55,20 @@ selectColor colored adj vertex =
 
 getVertexColor :: (Eq a) => Colored a -> Vertex a -> Maybe.Maybe Color
 getVertexColor colored vertex = snd <$> find (\v -> vertex == fst v) colored
+
+-- graph property
+order :: Graph a -> Int
+order = length . fst
+
+size :: Graph a -> Int
+size = length . snd
+
+degree :: (Eq a) => Graph a -> Vertex a -> Maybe Int
+degree graph vertex =
+  length . snd <$> (find ((== vertex) . fst) . graphToAdjacency $ graph)
+
+hasIsolatedVertex :: (Eq a) => Graph a -> Bool
+hasIsolatedVertex = (>0) . length . filter ((== 0) . length . snd) . graphToAdjacency
 
 graph1 :: Graph Integer
 graph1 =
@@ -117,8 +131,35 @@ coloringTests =
       coloring graph2 @?= [(1, 1), (2, 2), (3, 1), (4, 2), (5, 1), (6, 2)]
     ]
 
+propertyTests =
+  testGroup
+    "Property tests"
+    [ testGroup
+        "Graph order"
+        [ testCase "Graph #1" $ order graph1 @?= 8
+        , testCase "Graph #2" $ order graph2 @?= 6
+        ]
+    , testGroup
+        "Graph size"
+        [ testCase "Graph #1" $ size graph1 @?= 23
+        , testCase "Graph #2" $ size graph2 @?= 18
+        ]
+    , testGroup
+        "Vertex degree"
+        [ testCase "Vertex 1 of Graph #1" $ degree graph1 1 @?= Just 4
+        , testCase "Vertex 3 of Graph #1" $ degree graph1 3 @?= Just 2
+        , testCase "Unexisting vertex of Graph #1" $
+          degree graph1 103 @?= Nothing
+        ]
+    , testGroup
+        "Has isolated vertex?"
+        [ testCase "Graph #1 does not" $ hasIsolatedVertex graph1 @?= False
+        , testCase "Graph with isolated vertex" $ hasIsolatedVertex ([1, 2, 3], [(1, 2)]) @?= True
+        ]
+    ]
+
 tests :: TestTree
-tests = testGroup "Tests" [coloringTests]
+tests = testGroup "Tests" [coloringTests, propertyTests]
 
 main :: IO ()
 main = defaultMain tests
