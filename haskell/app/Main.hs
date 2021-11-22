@@ -22,7 +22,7 @@ graphToAdjacency (vertices, edges) =
   map (\v -> (v, adjencentVertices v edges)) vertices
   where
     adjencentVertices vertex =
-      nub . concatMap f . filter (\(x, y) -> (vertex == x) || (vertex == y))
+      concatMap f . filter (\(x, y) -> (vertex == x) || (vertex == y))
       where
         f (x, y)
           | vertex == x = [y]
@@ -40,7 +40,7 @@ color adjacentList (vertex:remaining) colored =
     selectedColor = selectColor colored adjacentList vertex
 
 neighbors :: (Eq a) => Adjacency a -> Vertex a -> [Vertex a]
-neighbors adj vertex = snd . Maybe.fromJust . find (\v -> vertex == fst v) $ adj
+neighbors adj vertex = snd . Maybe.fromJust . find ((== vertex) . fst) $ adj
 
 selectColor :: (Eq a) => Colored a -> Adjacency a -> Vertex a -> Color
 selectColor colored adj vertex =
@@ -56,7 +56,7 @@ selectColor colored adj vertex =
 getVertexColor :: (Eq a) => Colored a -> Vertex a -> Maybe.Maybe Color
 getVertexColor colored vertex = snd <$> find (\v -> vertex == fst v) colored
 
--- graph property
+-- graph properties
 order :: Graph a -> Int
 order = length . fst
 
@@ -68,7 +68,15 @@ degree graph vertex =
   length . snd <$> (find ((== vertex) . fst) . graphToAdjacency $ graph)
 
 hasIsolatedVertex :: (Eq a) => Graph a -> Bool
-hasIsolatedVertex = (>0) . length . filter ((== 0) . length . snd) . graphToAdjacency
+hasIsolatedVertex = any (null . snd) . graphToAdjacency
+
+hasLoop :: (Eq a) => Graph a -> Bool
+hasLoop = any (uncurry (==)) . snd
+
+isMultigraph :: (Eq a) => Graph a -> Bool
+isMultigraph = any (hasDuplicates . snd) . graphToAdjacency
+  where
+    hasDuplicates a = length (nub a) /= length a
 
 graph1 :: Graph Integer
 graph1 =
@@ -77,49 +85,19 @@ graph1 =
     , (1, 3)
     , (1, 4)
     , (1, 7)
-    , (2, 1)
     , (2, 5)
     , (2, 6)
-    , (3, 1)
     , (3, 7)
-    , (4, 1)
     , (4, 7)
-    , (5, 2)
     , (5, 6)
     , (5, 8)
-    , (6, 2)
-    , (6, 5)
     , (6, 8)
-    , (7, 1)
-    , (7, 3)
-    , (7, 4)
-    , (8, 5)
-    , (8, 6)
-    , (8, 7)
     ])
 
 graph2 :: Graph Integer
 graph2 =
   ( [1, 2, 3, 4, 5, 6]
-  , [ (1, 2)
-    , (1, 4)
-    , (1, 6)
-    , (2, 1)
-    , (2, 3)
-    , (2, 5)
-    , (3, 2)
-    , (3, 4)
-    , (3, 6)
-    , (4, 1)
-    , (4, 3)
-    , (4, 5)
-    , (5, 2)
-    , (5, 4)
-    , (5, 6)
-    , (6, 1)
-    , (6, 3)
-    , (6, 5)
-    ])
+  , [(1, 2), (1, 4), (1, 6), (2, 3), (2, 5), (3, 4), (3, 6), (4, 5), (5, 6)])
 
 coloringTests =
   testGroup
@@ -141,8 +119,9 @@ propertyTests =
         ]
     , testGroup
         "Graph size"
-        [ testCase "Graph #1" $ size graph1 @?= 23
-        , testCase "Graph #2" $ size graph2 @?= 18
+        [ testCase "Graph #1" $ size graph1 @?= 11
+        , testCase "Graph #2" $ size graph2 @?= 9
+        , testCase "Multigraph" $ size ([1, 2], [(1, 2), (1, 2), (2, 1)]) @?= 3
         ]
     , testGroup
         "Vertex degree"
@@ -154,7 +133,23 @@ propertyTests =
     , testGroup
         "Has isolated vertex?"
         [ testCase "Graph #1 does not" $ hasIsolatedVertex graph1 @?= False
-        , testCase "Graph with isolated vertex" $ hasIsolatedVertex ([1, 2, 3], [(1, 2)]) @?= True
+        , testCase "Graph with isolated vertex" $
+          hasIsolatedVertex ([1, 2, 3], [(1, 2)]) @?= True
+        ]
+    , testGroup
+        "Has loop?"
+        [ testCase "Graph #1 does not" $ hasLoop graph1 @?= False
+        , testCase "Graph with loop" $
+          hasLoop ([1, 2], [(1, 1), (1, 2)]) @?= True
+        ]
+    , testGroup
+        "Is a Multigraph?"
+        [ testCase "Graph #1 is not" $ isMultigraph graph1 @?= False
+        , testCase "Graph #2 is not" $ isMultigraph graph2 @?= False
+        , testCase "Multigraph #1" $
+          isMultigraph ([1, 2], [(1, 2), (1, 2)]) @?= True
+        , testCase "Multigraph #2" $
+          isMultigraph ([1, 2, 3], [(1, 2), (2, 1), (3, 1)]) @?= True
         ]
     ]
 
