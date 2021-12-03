@@ -15,10 +15,10 @@ type 'a adjacency = Adjacency of ('a * 'a list) list
 type color = int
   [@@deriving show, eq]
 
-type state = (int vertex * color) list
+type 'a state = ('a vertex * color) list
   [@@deriving show, eq]
 
-let state_testable = Alcotest.testable pp_state equal_state
+let state_testable e = Alcotest.testable (pp_state (Alcotest.pp e)) (equal_state (Alcotest.equal e))
 
 let adj_vertices vertex edges =
   List.filter edges ~f:(fun (x, y) -> (Poly.equal vertex x) || (Poly.equal y vertex))
@@ -57,7 +57,6 @@ let select_color state adj vertex =
 let rec color state adjacency_list =
   let Adjacency(adj) = adjacency_list in
   let current_vertex = List.find state ~f:(fun (_v, color) -> color = -1) in
-  Out_channel.print_endline (show_state state);
   match current_vertex with
   | None -> state
   | Some vertex ->
@@ -87,7 +86,7 @@ let test_graph_1 () =
       (8, 5); (8, 6); (8, 7);
     ]
   ) in
-  Alcotest.(check state_testable) 
+  Alcotest.(check (state_testable int))
     "valid coloring" 
     [(1, 1); (2, 2); (3, 2); (4, 2); (5, 1); (6, 3); (7, 3); (8, 2)] 
     (coloring g)
@@ -104,11 +103,10 @@ let test_graph_2 () =
       (6, 1); (6, 3); (6, 5);
     ]
   ) in
-  Alcotest.(check state_testable) 
+  Alcotest.(check (state_testable int))
     "valid coloring" 
     [(1, 1); (2, 2); (3, 1); (4, 2); (5, 1); (6, 2)]
     (coloring g)
-
 
 let () =
   let open Alcotest in
