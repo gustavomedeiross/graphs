@@ -19,9 +19,9 @@ type Colored a = [(Vertex a, Color)]
 
 graphToAdjacency :: (Eq a) => Graph a -> Adjacency a
 graphToAdjacency (vertices, edges) =
-  map (\v -> (v, adjencentVertices v edges)) vertices
+  map (\v -> (v, adjacentVertices v edges)) vertices
   where
-    adjencentVertices vertex =
+    adjacentVertices vertex =
       concatMap f . filter (\(x, y) -> (vertex == x) || (vertex == y))
       where
         f (x, y)
@@ -46,11 +46,11 @@ selectColor :: (Eq a) => Colored a -> Adjacency a -> Vertex a -> Color
 selectColor colored adj vertex =
   let neighborColors =
         Maybe.mapMaybe (getVertexColor colored) $ neighbors adj vertex
-   in f neighborColors 1
+   in selectColor' neighborColors 1
   where
-    f nghbsColors color =
+    selectColor' nghbsColors color =
       if color `elem` nghbsColors
-        then f nghbsColors (color + 1)
+        then selectColor' nghbsColors (color + 1)
         else color
 
 getVertexColor :: (Eq a) => Colored a -> Vertex a -> Maybe.Maybe Color

@@ -6,10 +6,10 @@ type 'a vertex = 'a
 type 'a edge = 'a * 'a
   [@@deriving show, eq]
 
-type 'a graph = Graph of 'a vertex list * 'a edge list
+type 'a graph = 'a vertex list * 'a edge list
   [@@deriving show, eq]
 
-type 'a adjacency = Adjacency of ('a * 'a list) list
+type 'a adjacency = ('a * 'a list) list
   [@@deriving show, eq]
 
 type color = int
@@ -18,62 +18,53 @@ type color = int
 type 'a state = ('a vertex * color) list
   [@@deriving show, eq]
 
-let state_testable e = Alcotest.testable (pp_state (Alcotest.pp e)) (equal_state (Alcotest.equal e))
+let graph_to_adjacency (vertices, edges) =
+  let adjacent_vertices vertex edges =
+    edges
+    |> List.filter ~f:(fun (x, y) -> (Poly.equal vertex x) || (Poly.equal vertex y))
+    |> List.concat_map ~f:(function 
+        | (x, y) when Poly.equal vertex x -> [y]
+        | (x, y) when Poly.equal vertex y -> [x]
+        | _ -> [])
+  in
+  List.map vertices ~f:(fun v -> (v, (adjacent_vertices v edges)))
 
-let adj_vertices vertex edges =
-  List.filter edges ~f:(fun (x, y) -> (Poly.equal vertex x) || (Poly.equal y vertex))
-  |> List.map ~f:(function 
-      | (x, y) when Poly.equal vertex x -> [y]
-      | (x, y) when Poly.equal vertex y -> [x]
-      | _ -> [])
-  |> List.concat
-  |> Set.Poly.of_list
-  |> Set.Poly.to_list
+let get_vertex_color colored_vertices vertex =
+  colored_vertices
+  |> List.find ~f:(fun v -> Poly.equal vertex (fst v))
+  |> Option.map ~f:snd
 
-let graph_to_adjacency = function
-  | Graph (vertices, edges) ->
-    Adjacency (List.map vertices ~f:(fun v -> (v, adj_vertices v edges)))
-
-let neighbors adj vertex =
+let neighbors (adj : 'a adjacency)  vertex =
   List.find adj ~f:(fun (v, _edges) -> Poly.equal vertex v)
   |> Option.map ~f:(fun (_, edges) -> edges)
   |> Option.value_exn
 
-let get_vertex_color state vertex =
-  List.find state ~f:(fun (v, _) -> Poly.equal vertex v)
-  |> Option.map ~f:(fun (_, color) -> color)
-  |> Option.value_exn
-
-let rec select_color' state nghbs color =
-  let nghbs_colors = List.map nghbs ~f:(fun v -> get_vertex_color state v) in
-  if List.exists nghbs_colors ~f:(fun c -> color = c)
-    then select_color' state nghbs (color + 1)
+let rec select_color' neighbor_colors color =
+  if List.mem neighbor_colors color ~equal:(Poly.equal)
+    then select_color' neighbor_colors (color + 1)
     else color
 
-let select_color state adj vertex =
-  let nghbs = neighbors adj (fst vertex) in
-  select_color' state nghbs 1
+let select_color colored_vertices (adjacency : 'a adjacency) vertex =
+  let neighbor_colors =
+    neighbors adjacency vertex
+    |> List.filter_map ~f:(get_vertex_color colored_vertices)
+  in
+  select_color' neighbor_colors 1
 
-let rec color state adjacency_list =
-  let Adjacency(adj) = adjacency_list in
-  let current_vertex = List.find state ~f:(fun (_v, color) -> color = -1) in
-  match current_vertex with
-  | None -> state
-  | Some vertex ->
-    let selected_color = select_color state adj vertex in
-    let new_state = List.map state ~f:(fun (v, color) -> if Poly.equal (fst vertex) v
-      then (v, selected_color)
-      else (v, color))
-    in
-    color new_state adjacency_list
+let rec color adjacent_list vertices colored_vertices =
+  match vertices with
+  | [] -> List.rev colored_vertices
+  | vertex :: remaining ->
+      let selected_color = select_color colored_vertices adjacent_list vertex in
+      color adjacent_list remaining ((vertex, selected_color) :: colored_vertices)
 
-let coloring (graph : 'a graph) : ('a vertex * color) list =
-  let Adjacency(adj) = graph_to_adjacency graph in
-  let initial_state = List.map adj ~f:(fun v -> (fst v, -1)) in
-  color initial_state (Adjacency adj)
+let coloring graph =
+  color (graph_to_adjacency graph) (fst graph) []
+
+let state_testable e = Alcotest.testable (pp_state (Alcotest.pp e)) (equal_state (Alcotest.equal e))
 
 let test_graph_1 () =
-  let g = Graph(
+  let g = (
     [1; 2; 3; 4; 5; 6; 7; 8],
     [
       (1, 2); (1, 3); (1, 4); (1, 7);
@@ -92,7 +83,7 @@ let test_graph_1 () =
     (coloring g)
 
 let test_graph_2 () =
-  let g = Graph(
+  let g = (
     [1; 2; 3; 4; 5; 6;],
     [
       (1, 2); (1, 4); (1, 6);
