@@ -1,0 +1,4 @@
+(test
+ (name test_coloring)
+ (libraries graph_coloring alcotest)
+ (preprocess (pps ppx_deriving.show ppx_deriving.eq)))

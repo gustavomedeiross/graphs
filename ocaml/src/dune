@@ -1,0 +1,5 @@
+(library
+ (name graph_coloring)
+ (libraries core)
+ (preprocess (pps ppx_deriving.show ppx_deriving.eq))
+ (modules_without_implementation sig))
